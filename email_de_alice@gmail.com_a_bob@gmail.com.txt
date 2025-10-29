@@ -1,5 +1,0 @@
-From: <alice@gmail.com>
-To: <bob@gmail.com>
-
-Bonjour Bob !
-Ceci est un test.
