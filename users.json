@@ -1,0 +1,18 @@
+{
+    "alice@gmail.com": {
+        "password_hash": "e99a18c428cb38d5f260853678922e03",
+        "inbox": "boite_mail/alice@gmail.com"
+    },
+    "bob@gmail.com": {
+        "password_hash": "81dc9bdb52d04dc20036dbd8313ed055",
+        "inbox": "boite_mail/bob@gmail.com"
+    },
+    "amina@gmail.com": {
+        "password_hash": "7dd84a1b7669d61a6aafb72464679ccb",
+        "inbox": "boite_mail/amina@gmail.com"
+    },
+    "fatoumata@gmail.com": {
+        "password_hash": "6536a6195d1e8587d9c810786b1fb4d8",
+        "inbox": "boite_mail/fatoumata@gmail.com"
+    }
+}

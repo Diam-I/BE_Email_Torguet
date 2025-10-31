@@ -7,7 +7,8 @@ HOST = "localhost"
 PORT = 8025
 DOSSIER_RACINE = "boite_mail"
 
-##fonction permettant de gere un client 
+
+### fonction permettant de gerer un client  ###
 def gerer_client(connexion, adresse):
     print("Connecte par", adresse)
     connexion.send(b"220 Service pret\r\n")
@@ -27,18 +28,26 @@ def gerer_client(connexion, adresse):
         if ligne.upper().startswith("MAIL FROM:"):
             print("Commande MAIL FROM recue")
             emetteur = ligne[10:].strip()
-            dossier_emetteur = os.path.join(DOSSIER_RACINE, emetteur.replace("<", "").replace(">", ""))
+            dossier_emetteur = os.path.join(
+                DOSSIER_RACINE, emetteur.replace("<", "").replace(">", "")
+            )
             os.makedirs(dossier_emetteur, exist_ok=True)
             connexion.send(b"250 OK\r\n")
 
         elif ligne.upper().startswith("RCPT TO:"):
             print("Commande RCPT TO recue")
             destinataire = ligne[8:].strip()
+            dossier_recepteur = os.path.join(
+                DOSSIER_RACINE, destinataire.replace("<", "").replace(">", "")
+            )
+            os.makedirs(dossier_recepteur, exist_ok=True)
             connexion.send(b"250 OK\r\n")
 
         elif ligne.upper() == "DATA":
             print("Commande DATA recue")
-            connexion.send(b"354 Commencez a saisir le message, terminez par une ligne avec un point seul\r\n")
+            connexion.send(
+                b"354 Commencez a saisir le message, terminez par une ligne avec un point seul\r\n"
+            )
             messages = []
             client_fichier = connexion.makefile("r")
             for ligne_msg in client_fichier:
@@ -49,12 +58,18 @@ def gerer_client(connexion, adresse):
 
             contenu_message = "\n".join(messages)
             date_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            nom_fichier = f"email_a_{destinataire.replace('<','').replace('>','')}_{date_str}.txt"
-            chemin = os.path.join(dossier_emetteur, nom_fichier)
-            with open(chemin, "w", encoding="utf-8") as f:
+            nom_fichier_recu = (
+                f"email_de_{emetteur.replace('<','').replace('>','')}_{date_str}.txt"
+            )
+            nom_fichier_envoye = (
+                f"email_a_{destinataire.replace('<','').replace('>','')}_{date_str}.txt"
+            )
+            chemin_envoye = os.path.join(dossier_emetteur, nom_fichier_envoye)
+            with open(chemin_envoye, "w", encoding="utf-8") as f:
                 f.write(f"From: {emetteur}\nTo: {destinataire}\n\n{contenu_message}")
-            print(f"Message enregistré -> {chemin}")
-            connexion.send(b"250 OK: Message enregistre")
+            chemin_recu = os.path.join(dossier_recepteur, nom_fichier_recu)
+            with open(chemin_recu, "w", encoding="utf-8") as f:
+                f.write(f"From: {emetteur}\nTo: {destinataire}\n\n{contenu_message}")
 
         elif ligne.upper() == "QUIT":
             connexion.send(b"221 Fermeture de la connexion")
@@ -76,9 +91,11 @@ if __name__ == "__main__":
         ecoute.bind((HOST, PORT))
         ecoute.listen()
         print(f"Serveur ecoute sur {HOST}:{PORT}")
-        #permet de cree un thread par client 
+        # permet de cree un thread par client
         while True:
             connexion, adresse = ecoute.accept()
-            thread_client = threading.Thread(target=gerer_client, args=(connexion, adresse))
+            thread_client = threading.Thread(
+                target=gerer_client, args=(connexion, adresse)
+            )
             thread_client.daemon = True
             thread_client.start()
