@@ -19,44 +19,54 @@ def gerer_client(connexion, adresse):
 
     while True:
         donnees = connexion.recv(1024)
+        ## si le client deconnecte ##
         if not donnees:
             print("Client deconnecte...")
             break
 
         ligne = donnees.decode("utf-8").strip()
 
+        ## traitement des commandes ##
         if ligne.upper().startswith("MAIL FROM:"):
+            # si une commande MAIL FROM est recue #
             print("Commande MAIL FROM recue")
             emetteur = ligne[10:].strip()
             dossier_emetteur = os.path.join(
                 DOSSIER_RACINE, emetteur.replace("<", "").replace(">", "")
             )
+            # creation du dossier de l'emetteur s'il n'existe pas #
             os.makedirs(dossier_emetteur, exist_ok=True)
             connexion.send(b"250 OK\r\n")
 
         elif ligne.upper().startswith("RCPT TO:"):
+            # si une commande RCPT TO est recue #
             print("Commande RCPT TO recue")
             destinataire = ligne[8:].strip()
+            # creation du dossier du destinataire s'il n'existe pas #
             dossier_recepteur = os.path.join(
                 DOSSIER_RACINE, destinataire.replace("<", "").replace(">", "")
             )
             os.makedirs(dossier_recepteur, exist_ok=True)
+
             connexion.send(b"250 OK\r\n")
 
         elif ligne.upper() == "DATA":
+            # si une commande DATA est recue #
             print("Commande DATA recue")
             connexion.send(
                 b"354 Commencez a saisir le message, terminez par une ligne avec un point seul\r\n"
             )
             messages = []
+            # lecture du message ligne par ligne #
             client_fichier = connexion.makefile("r")
             for ligne_msg in client_fichier:
                 ligne_msg = ligne_msg.strip()
                 if ligne_msg == ".":
                     break
                 messages.append(ligne_msg)
-
+            # sauvegarde du message dans les dossiers de l'emetteur et du destinataire #
             contenu_message = "\n".join(messages)
+
             date_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             nom_fichier_recu = (
                 f"email_de_{emetteur.replace('<','').replace('>','')}_{date_str}.txt"
@@ -70,14 +80,15 @@ def gerer_client(connexion, adresse):
             chemin_recu = os.path.join(dossier_recepteur, nom_fichier_recu)
             with open(chemin_recu, "w", encoding="utf-8") as f:
                 f.write(f"From: {emetteur}\nTo: {destinataire}\n\n{contenu_message}")
-
+            connexion.send(b"250 Message bien recu\r\n")
+        # si une commande QUIT est recue #
         elif ligne.upper() == "QUIT":
             connexion.send(b"221 Fermeture de la connexion")
             break
-
+        # si une commande HELLO est recue #
         elif ligne.upper() == "HELLO":
             connexion.send(b"250 Hello , la connexion est maintenue")
-
+        # sinon commande inconnue #
         else:
             connexion.send(b"500 Commande inconnue\r\n")
 
@@ -85,13 +96,15 @@ def gerer_client(connexion, adresse):
     print(f"Connexion fermée pour {adresse}")
 
 
+### fonction principale du serveur ###
 if __name__ == "__main__":
+    ## creation du dossier racine des boites mail s'il n'existe pas ##
     os.makedirs(DOSSIER_RACINE, exist_ok=True)
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ecoute:
         ecoute.bind((HOST, PORT))
         ecoute.listen()
         print(f"Serveur ecoute sur {HOST}:{PORT}")
-        # permet de cree un thread par client
+        # permet de cree un thread par client #
         while True:
             connexion, adresse = ecoute.accept()
             thread_client = threading.Thread(

@@ -8,8 +8,8 @@ HOST = "localhost"
 PORT = 8025
 
 
+### lire une reponse du serveur ###
 def recv_rep(sock: socket.socket) -> str:
-    """Lit une réponse simple du serveur"""
     try:
         data = sock.recv(4096)
         if not data:
@@ -19,13 +19,14 @@ def recv_rep(sock: socket.socket) -> str:
         return f"(erreur lecture socket: {e})"
 
 
+### envoyer un message au serveur ###
 def env_msg(sock: socket.socket, text: str):
-    """Envoi un msg au serveur"""
     if not text.endswith("\r\n"):
         text = text + "\r\n"
     sock.sendall(text.encode("utf-8"))
 
 
+### fonction principale ###
 def main():
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -34,7 +35,7 @@ def main():
         print(f"Impossible de se connecter à {HOST}:{PORT} -> {e}")
         sys.exit(1)
 
-    # lire le message d'accueil
+    ## lire le message d'accueil ##
     welcome = recv_rep(s)
     if welcome:
         print("Serveur:", welcome.strip())
@@ -42,11 +43,12 @@ def main():
         print("Aucune réponse du serveur. Fermeture.")
         s.close()
         return
-    ## Authentification / Inscription ##
+
+    ## authentification / Inscription ##
     mail_utilisateur = ui.main()
     print(f"Connecté en tant que {mail_utilisateur}\n")
 
-    ## Interaction avec le serveur ##
+    ## interaction avec le serveur ##
     while True:
         try:
             choix = input("Voulez-vous : \n1- Envoyer un email\n2- Quitter\n").strip()
@@ -60,9 +62,11 @@ def main():
 
         if not choix:
             continue
-        # Envoi d'un email #
+        ## envoi d'un email ##
         if choix == "1":
+            # saisir le destinataire #
             dest = input("Destinataire : ").strip()
+            # envoyer les commandes SMTP et lire les reponses #
             env_msg(s, f"MAIL FROM: <{mail_utilisateur}>")
             resp = recv_rep(s)
             print("Serveur:", resp.strip())
@@ -70,11 +74,14 @@ def main():
             resp = recv_rep(s)
             print("Serveur:", resp.strip())
             env_msg(s, "DATA")
+            resp = recv_rep(s)
+            # print("Serveur:", resp.strip())
             if not resp:
                 print("Plus de réponse du serveur, fermeture.")
                 break
             print("Saisissez le corps du message. Terminez par une ligne seule '.'")
             while True:
+                # lire une ligne du message #
                 try:
                     msg_line = input()
                 except (EOFError, KeyboardInterrupt):
@@ -82,21 +89,23 @@ def main():
                     msg_line = "."
                     print()
                 env_msg(s, msg_line)
+
                 if msg_line == ".":
+                    # fin du message #
+                    s.sendall(b".\r\n")
                     break
-            # Lire la réponse finale #
             resp = recv_rep(s)
             print("Serveur:", resp.strip())
             continue
 
-        # Quitter : fermeture de la connexion
+        ## quitter : fermeture de la connexion ##
         if choix == "2":
             env_msg(s, "QUIT")
             resp = recv_rep(s)
             print("Serveur:", resp.strip())
             break
 
-        # Sinon autres commandes (HELO, EHLO, MAIL FROM:, RCPT TO:, etc.)
+        ## sinon autres commandes (HELO, EHLO, MAIL FROM:, RCPT TO:, etc.) ##
         env_msg(s, choix)
         resp = recv_rep(s)
         if resp == "":
@@ -108,5 +117,6 @@ def main():
     s.close()
 
 
+### lancement du programme ###
 if __name__ == "__main__":
     main()

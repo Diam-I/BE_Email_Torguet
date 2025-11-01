@@ -14,5 +14,13 @@
     "fatoumata@gmail.com": {
         "password_hash": "6536a6195d1e8587d9c810786b1fb4d8",
         "inbox": "boite_mail/fatoumata@gmail.com"
+    },
+    "maxime@gmail.com": {
+        "password_hash": "f45edc912e5279e9ea342c3a3aa053a5",
+        "inbox": "boite_mail/maxime@gmail.com"
+    },
+    "steve@gmail.com": {
+        "password_hash": "f2346fd9548aef86ce4c485eb0731616",
+        "inbox": "boite_mail/steve@gmail.com"
     }
 }
