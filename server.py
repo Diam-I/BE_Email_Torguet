@@ -16,6 +16,7 @@ def gerer_client(connexion, adresse):
     emetteur = None
     destinataire = None
     dossier_emetteur = None
+    ehlo_recu = False
 
     while True:
         donnees = connexion.recv(1024)
@@ -85,9 +86,22 @@ def gerer_client(connexion, adresse):
         elif ligne.upper() == "QUIT":
             connexion.send(b"221 Fermeture de la connexion")
             break
-        # si une commande HELLO est recue #
-        elif ligne.upper() == "HELLO":
-            connexion.send(b"250 Hello , la connexion est maintenue")
+        # si une commande HELO est recue #
+        elif ligne.upper() == "HELO":
+            print("Commande HELO recue.")
+            if ehlo_recu:
+                # si un EHLO a ete envoye avant #
+                connexion.send(b"250 OK\r\n")
+                # reset du flag #
+                ehlo_recu = False
+            else:
+                # sinon repondre normalement #
+                connexion.send(b"250 HELO , la connexion est maintenue")
+        # si une commande EHLO est recue #
+        elif ligne.upper() == "EHLO":
+            print("Commande EHLO recue.")
+            ehlo_recu = True
+            connexion.send(b"502 commande not implemented\r\n")
         # sinon commande inconnue #
         else:
             connexion.send(b"500 Commande inconnue\r\n")

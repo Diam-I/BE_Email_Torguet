@@ -22,5 +22,9 @@
     "steve@gmail.com": {
         "password_hash": "f2346fd9548aef86ce4c485eb0731616",
         "inbox": "boite_mail/steve@gmail.com"
+    },
+    "christian@gmail.com": {
+        "password_hash": "9c7518d71a15466703cd068913814538",
+        "inbox": "boite_mail/christian@gmail.com"
     }
 }
