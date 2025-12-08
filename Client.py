@@ -48,6 +48,32 @@ def main():
     mail_utilisateur = ui.main()
     print(f"Connecté en tant que {mail_utilisateur}\n")
 
+    # =======================================================
+    # Code ajouter V2 gestion helo et ehlo 
+    # =======================================================
+    # Tenter EHLO 
+    env_msg(s, f"EHLO")
+    resp = recv_rep(s)
+    print("Serveur:", resp.strip())
+
+    # Verification de la reponse 
+    if resp.startswith("502"):
+        print("Serveur a refusé EHLO (502). Basculement sur HELO...")
+        env_msg(s, f"HELO")
+        resp = recv_rep(s)
+        print("Serveur:", resp.strip())
+
+        # Si le serveur répond 250 (succès), nous sommes identifiés.
+        if not resp.startswith("250"):
+            print("ERREUR FATALE: Le serveur a échoué l'identification HELO. Fermeture.")
+            s.close()
+            return
+        print("Identification réussie par HELO.")
+        print("Serveur:", resp.strip())
+    # =======================================================
+    # fin  Code V2
+    # =======================================================
+
     ## interaction avec le serveur ##
     while True:
         try:

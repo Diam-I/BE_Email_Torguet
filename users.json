@@ -26,5 +26,13 @@
     "christian@gmail.com": {
         "password_hash": "9c7518d71a15466703cd068913814538",
         "inbox": "boite_mail/christian@gmail.com"
+    },
+    "test_version2@gmail.com": {
+        "password_hash": "8ec4d646c4c56fdd4dde6354265ceaea",
+        "inbox": "boite_mail/test_version2@gmail.com"
+    },
+    "salia@gmail.com": {
+        "password_hash": "ba77274aa2d998e2f009128de94d3442",
+        "inbox": "boite_mail/salia@gmail.com"
     }
 }

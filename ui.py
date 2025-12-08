@@ -1,3 +1,12 @@
+## Ce fichier gère l'authentification et l'inscription des utilisateurs en leur
+#  proposant un menu pour se connecter ou créer un nouveau compte.
+
+## Il assure la sécurité des mots de passe en les chiffrant (hachage MD5) 
+# avant de vérifier leur validité ou de les enregistrer dans le fichier users.json via le module users.
+
+#Il permet au programme client (client.py) de récupérer l'adresse e-mail de l'utilisateur 
+# connecté afin de l'utiliser comme expéditeur lors de l'envoi de messages.
+
 import hashlib
 import users
 
