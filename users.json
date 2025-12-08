@@ -34,5 +34,9 @@
     "salia@gmail.com": {
         "password_hash": "ba77274aa2d998e2f009128de94d3442",
         "inbox": "boite_mail/salia@gmail.com"
+    },
+    "hugo@gmail.com": {
+        "password_hash": "cf84b1d1bcbc434c1ff8131f4ce57a3f",
+        "inbox": "boite_mail/hugo@gmail.com"
     }
 }
