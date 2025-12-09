@@ -130,14 +130,6 @@ def main():
             print("Serveur:", resp.strip())
             break
 
-        ## sinon autres commandes (HELO, EHLO, MAIL FROM:, RCPT TO:, etc.) ##
-        env_msg(s, choix)
-        resp = recv_rep(s)
-        if resp == "":
-            print("Aucune réponse (connexion fermée).")
-            break
-        print("Serveur:", resp.strip())
-
     print("Fermeture du client.")
     s.close()
 
