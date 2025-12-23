@@ -4,7 +4,7 @@ import datetime
 import threading
 
 HOST = "localhost"
-PORT = 8025
+PORT_SMTP = 25  # Port SMTP #
 DOSSIER_RACINE = "boite_mail"
 
 
@@ -87,7 +87,7 @@ def gerer_client(connexion, adresse):
             connexion.send(b"221 Fermeture de la connexion")
             break
         # si une commande HELO est recue #
-        elif ligne.upper() == "HELO":
+        elif ligne.upper().startswith("HELO"):
             print("Commande HELO recue.")
             if ehlo_recu:
                 # si un EHLO a ete envoye avant #
@@ -96,9 +96,9 @@ def gerer_client(connexion, adresse):
                 ehlo_recu = False
             else:
                 # sinon repondre normalement #
-                connexion.send(b"250 HELO , la connexion est maintenue")
+                connexion.send(b"250 OK\r\n")
         # si une commande EHLO est recue #
-        elif ligne.upper() == "EHLO":
+        elif ligne.upper().startswith("EHLO"):
             print("Commande EHLO recue.")
             ehlo_recu = True
             connexion.send(b"502 commande not implemented\r\n")
@@ -115,9 +115,9 @@ if __name__ == "__main__":
     ## creation du dossier racine des boites mail s'il n'existe pas ##
     os.makedirs(DOSSIER_RACINE, exist_ok=True)
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ecoute:
-        ecoute.bind((HOST, PORT))
+        ecoute.bind((HOST, PORT_SMTP))
         ecoute.listen()
-        print(f"Serveur ecoute sur {HOST}:{PORT}")
+        print(f"Serveur ecoute sur {HOST}:{PORT_SMTP}")
         # permet de cree un thread par client #
         while True:
             connexion, adresse = ecoute.accept()
