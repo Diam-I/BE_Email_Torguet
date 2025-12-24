@@ -1,42 +1,50 @@
 {
-    "alice@gmail.com": {
-        "password_hash": "e99a18c428cb38d5f260853678922e03",
-        "inbox": "boite_mail/alice@gmail.com"
-    },
-    "bob@gmail.com": {
-        "password_hash": "81dc9bdb52d04dc20036dbd8313ed055",
-        "inbox": "boite_mail/bob@gmail.com"
-    },
-    "amina@gmail.com": {
-        "password_hash": "7dd84a1b7669d61a6aafb72464679ccb",
-        "inbox": "boite_mail/amina@gmail.com"
-    },
-    "fatoumata@gmail.com": {
-        "password_hash": "6536a6195d1e8587d9c810786b1fb4d8",
-        "inbox": "boite_mail/fatoumata@gmail.com"
-    },
-    "maxime@gmail.com": {
-        "password_hash": "f45edc912e5279e9ea342c3a3aa053a5",
-        "inbox": "boite_mail/maxime@gmail.com"
-    },
-    "steve@gmail.com": {
-        "password_hash": "f2346fd9548aef86ce4c485eb0731616",
-        "inbox": "boite_mail/steve@gmail.com"
-    },
-    "christian@gmail.com": {
-        "password_hash": "9c7518d71a15466703cd068913814538",
-        "inbox": "boite_mail/christian@gmail.com"
-    },
-    "test_version2@gmail.com": {
-        "password_hash": "8ec4d646c4c56fdd4dde6354265ceaea",
-        "inbox": "boite_mail/test_version2@gmail.com"
-    },
-    "salia@gmail.com": {
-        "password_hash": "ba77274aa2d998e2f009128de94d3442",
-        "inbox": "boite_mail/salia@gmail.com"
-    },
-    "hugo@gmail.com": {
-        "password_hash": "cf84b1d1bcbc434c1ff8131f4ce57a3f",
-        "inbox": "boite_mail/hugo@gmail.com"
-    }
+  "alice@gmail.com": {
+    "password_hash": "e99a18c428cb38d5f260853678922e03",
+    "inbox": "boite_mail/alice@gmail.com"
+  },
+  "bob@gmail.com": {
+    "password_hash": "81dc9bdb52d04dc20036dbd8313ed055",
+    "inbox": "boite_mail/bob@gmail.com"
+  },
+  "amina@gmail.com": {
+    "password_hash": "7dd84a1b7669d61a6aafb72464679ccb",
+    "inbox": "boite_mail/amina@gmail.com"
+  },
+  "fatoumata@gmail.com": {
+    "password_hash": "6536a6195d1e8587d9c810786b1fb4d8",
+    "inbox": "boite_mail/fatoumata@gmail.com"
+  },
+  "maxime@gmail.com": {
+    "password_hash": "f45edc912e5279e9ea342c3a3aa053a5",
+    "inbox": "boite_mail/maxime@gmail.com"
+  },
+  "steve@gmail.com": {
+    "password_hash": "f2346fd9548aef86ce4c485eb0731616",
+    "inbox": "boite_mail/steve@gmail.com"
+  },
+  "christian@gmail.com": {
+    "password_hash": "9c7518d71a15466703cd068913814538",
+    "inbox": "boite_mail/christian@gmail.com"
+  },
+  "test_version2@gmail.com": {
+    "password_hash": "8ec4d646c4c56fdd4dde6354265ceaea",
+    "inbox": "boite_mail/test_version2@gmail.com"
+  },
+  "salia@gmail.com": {
+    "password_hash": "ba77274aa2d998e2f009128de94d3442",
+    "inbox": "boite_mail/salia@gmail.com"
+  },
+  "hugo@gmail.com": {
+    "password_hash": "cf84b1d1bcbc434c1ff8131f4ce57a3f",
+    "inbox": "boite_mail/hugo@gmail.com"
+  },
+  "alice@gmail.com ": {
+    "password_hash": "8714bd74bdd83c760184dd89c829f3a2",
+    "inbox": "boite_mail/alice@gmail.com "
+  },
+  "zou@gmail.com": {
+    "password_hash": "50ce1b7b75dbeda1c6c6c07b5c9dfa4e",
+    "inbox": "boite_mail/zou@gmail.com"
+  }
 }

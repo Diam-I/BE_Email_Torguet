@@ -82,10 +82,12 @@ def gerer_client(connexion, adresse):
             with open(chemin_recu, "w", encoding="utf-8") as f:
                 f.write(f"From: {emetteur}\nTo: {destinataire}\n\n{contenu_message}")
             connexion.send(b"250 Message bien recu\r\n")
+
         # si une commande QUIT est recue #
         elif ligne.upper() == "QUIT":
             connexion.send(b"221 Fermeture de la connexion")
             break
+
         # si une commande HELO est recue #
         elif ligne.upper().startswith("HELO"):
             print("Commande HELO recue.")
@@ -97,11 +99,13 @@ def gerer_client(connexion, adresse):
             else:
                 # sinon repondre normalement #
                 connexion.send(b"250 OK\r\n")
+
         # si une commande EHLO est recue #
         elif ligne.upper().startswith("EHLO"):
             print("Commande EHLO recue.")
             ehlo_recu = True
             connexion.send(b"502 commande not implemented\r\n")
+
         # sinon commande inconnue #
         else:
             connexion.send(b"500 Commande inconnue\r\n")

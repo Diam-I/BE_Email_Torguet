@@ -40,11 +40,7 @@ def main():
                 "Voulez-vous : \n1- Envoyer un email\n2- Lire les emails\n3- Quitter\n"
             ).strip()
         except (EOFError, KeyboardInterrupt):
-            print("\nInterruption locale. Envoi QUIT puis fermeture.")
-            try:
-                env_msg(s, "QUIT")
-            except Exception:
-                pass
+            print("\nInterruption locale.")
             break
 
         if not choix:
@@ -53,35 +49,49 @@ def main():
         if choix == "1":
             ## connexion au serveur SMTP ##
             try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                s.connect((HOST, PORT_SMTP))
+                smtp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                smtp_socket.connect((HOST, PORT_SMTP))
             except Exception as e:
                 print(f"Impossible de se connecter à {HOST}:{PORT_SMTP} -> {e}")
                 sys.exit(1)
             # lire le message d'accueil #
-            welcome = recv_rep(s)
+            welcome = recv_rep(smtp_socket)
             if welcome:
                 print("Serveur:", welcome.strip())
             else:
                 print("Aucune réponse du serveur. Fermeture.")
-                s.close()
+                smtp_socket.close()
                 return
+
+            # Tenter EHLO #
+            env_msg(smtp_socket, "EHLO localhost")
+            resp = recv_rep(smtp_socket)
+
+            if resp.startswith("502"):
+                env_msg(smtp_socket, "HELO localhost")
+                resp = recv_rep(smtp_socket)
+
+            if not resp.startswith("250"):
+                print("Erreur identification SMTP.")
+                smtp_socket.close()
+                continue
+
             print(f"Connecté au serveur SMTP {HOST}:{PORT_SMTP}")
             # saisir le destinataire #
             dest = input("Destinataire : ").strip()
             # envoyer les commandes SMTP et lire les reponses #
-            env_msg(s, f"MAIL FROM: <{mail_utilisateur}>")
-            resp = recv_rep(s)
+            env_msg(smtp_socket, f"MAIL FROM: <{mail_utilisateur}>")
+            resp = recv_rep(smtp_socket)
             print("Serveur:", resp.strip())
-            env_msg(s, f"RCPT TO: <{dest}>")
-            resp = recv_rep(s)
+            env_msg(smtp_socket, f"RCPT TO: <{dest}>")
+            resp = recv_rep(smtp_socket)
             print("Serveur:", resp.strip())
-            env_msg(s, "DATA")
-            resp = recv_rep(s)
-            # print("Serveur:", resp.strip())
+            env_msg(smtp_socket, "DATA")
+            resp = recv_rep(smtp_socket)
             if not resp:
                 print("Plus de réponse du serveur, fermeture.")
-                break
+                smtp_socket.close()
+                continue
             print("Saisissez le corps du message. Terminez par une ligne seule '.'")
             while True:
                 # lire une ligne du message #
@@ -91,84 +101,65 @@ def main():
                     # si interruption pendant la saisie on terminera quand meme le message #
                     msg_line = "."
                     print()
-                env_msg(s, msg_line)
+                env_msg(smtp_socket, msg_line)
 
                 if msg_line == ".":
                     # fin du message #
-                    s.sendall(b".\r\n")
                     break
-            resp = recv_rep(s)
+            resp = recv_rep(smtp_socket)
             print("Serveur:", resp.strip())
+            env_msg(smtp_socket, "QUIT")
+            recv_rep(smtp_socket)
+            smtp_socket.close()
             continue
 
         ## lire les emails ##
         if choix == "2":
             ## connexion au serveur POP3 ##
             try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                s.connect((HOST, PORT_POP3))
+                pop3_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                pop3_socket.connect((HOST, PORT_POP3))
             except Exception as e:
                 print(f"Impossible de se connecter à {HOST}:{PORT_POP3} -> {e}")
                 sys.exit(1)
             # lire le message d'accueil #
-            welcome = recv_rep(s)
+            welcome = recv_rep(pop3_socket)
             if welcome:
                 print("Serveur:", welcome.strip())
             else:
                 print("Aucune réponse du serveur. Fermeture.")
-                s.close()
+                pop3_socket.close()
                 return
             print(f"Connecté au serveur POP3 {HOST}:{PORT_POP3}")
             # envoyer STAT #
-            env_msg(s, "STAT")
-            resp = recv_rep(s)
+            env_msg(pop3_socket, "STAT")
+            resp = recv_rep(pop3_socket)
             print("Serveur:", resp.strip())
             # envoyer LIST #
-            env_msg(s, "LIST")
-            resp = recv_rep(s)
+            env_msg(pop3_socket, "LIST")
+            resp = recv_rep(pop3_socket)
             print("Serveur:", resp.strip())
             # demander quel email lire #
             num_email = input("Quel email lire (numéro) ? ").strip()
             if not num_email.isdigit():
                 print("Numéro invalide.")
+                env_msg(pop3_socket, "QUIT")
+                recv_rep(pop3_socket)
+                pop3_socket.close()
                 continue
             # envoyer RETR #
-            env_msg(s, f"RETR {num_email}")
-            resp = recv_rep(s)
+            env_msg(pop3_socket, f"RETR {num_email}")
+            resp = recv_rep(pop3_socket)
             print("Serveur:", resp.strip())
+            env_msg(pop3_socket, "QUIT")
+            recv_rep(pop3_socket)
+            pop3_socket.close()
             continue
 
         ## quitter : fermeture de la connexion ##
         if choix == "3":
-            env_msg(s, "QUIT")
-            resp = recv_rep(s)
-            print("Serveur:", resp.strip())
+            print("Fermeture du client.")
             break
-
-    # Tenter EHLO #
-    env_msg(s, f"EHLO")
-    resp = recv_rep(s)
-    print("Serveur:", resp.strip())
-
-    # Verification de la reponse #
-    if resp.startswith("502"):
-        print("Serveur a refusé EHLO (502). Basculement sur HELO...")
-        env_msg(s, f"HELO")
-        resp = recv_rep(s)
-        print("Serveur:", resp.strip())
-
-        # Si le serveur répond 250 (succès), nous sommes identifiés #
-        if not resp.startswith("250"):
-            print(
-                "ERREUR FATALE: Le serveur a échoué l'identification HELO. Fermeture."
-            )
-            s.close()
-            return
-        print("Identification réussie par HELO.")
-        print("Serveur:", resp.strip())
-
-    print("Fermeture du client.")
-    s.close()
 
 
 ### lancement du programme ###
