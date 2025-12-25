@@ -79,6 +79,8 @@ def main():
             print(f"Connecté au serveur SMTP {HOST}:{PORT_SMTP}")
             # saisir le destinataire #
             dest = input("Destinataire : ").strip()
+            # saisir l'onjet #
+            sujet = input("Sujet : ").strip()
             # envoyer les commandes SMTP et lire les reponses #
             env_msg(smtp_socket, f"MAIL FROM: <{mail_utilisateur}>")
             resp = recv_rep(smtp_socket)
@@ -86,8 +88,13 @@ def main():
             env_msg(smtp_socket, f"RCPT TO: <{dest}>")
             resp = recv_rep(smtp_socket)
             print("Serveur:", resp.strip())
+
+            # saisir le contenu du message #
             env_msg(smtp_socket, "DATA")
             resp = recv_rep(smtp_socket)
+            env_msg(smtp_socket, f"Subject: {sujet}")
+
+            print("Saisissez le corps du message. Terminez par une ligne seule '.'")
             if not resp:
                 print("Plus de réponse du serveur, fermeture.")
                 smtp_socket.close()

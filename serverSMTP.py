@@ -57,6 +57,7 @@ def gerer_client(connexion, adresse):
             connexion.send(
                 b"354 Commencez a saisir le message, terminez par une ligne avec un point seul\r\n"
             )
+            sujet = None
             messages = []
             # lecture du message ligne par ligne #
             client_fichier = connexion.makefile("r")
@@ -64,7 +65,12 @@ def gerer_client(connexion, adresse):
                 ligne_msg = ligne_msg.strip()
                 if ligne_msg == ".":
                     break
-                messages.append(ligne_msg)
+                if ligne_msg.startswith("Subject:"):
+                    sujet = ligne_msg.replace("Subject:", "").strip()
+                    if not sujet:
+                        sujet = "Sans sujet"
+                else:
+                    messages.append(ligne_msg)
             # sauvegarde du message dans les dossiers de l'emetteur et du destinataire #
             contenu_message = "\n".join(messages)
 
@@ -77,10 +83,14 @@ def gerer_client(connexion, adresse):
             )
             chemin_envoye = os.path.join(dossier_emetteur, nom_fichier_envoye)
             with open(chemin_envoye, "w", encoding="utf-8") as f:
-                f.write(f"From: {emetteur}\nTo: {destinataire}\n\n{contenu_message}")
+                f.write(
+                    f"From: {emetteur}\nTo: {destinataire}\nSubject: {sujet}\n\n{contenu_message}"
+                )
             chemin_recu = os.path.join(dossier_recepteur, nom_fichier_recu)
             with open(chemin_recu, "w", encoding="utf-8") as f:
-                f.write(f"From: {emetteur}\nTo: {destinataire}\n\n{contenu_message}")
+                f.write(
+                    f"From: {emetteur}\nTo: {destinataire}\nSubject: {sujet}\n\n{contenu_message}"
+                )
             connexion.send(b"250 Message bien recu\r\n")
 
         # si une commande QUIT est recue #
@@ -106,6 +116,21 @@ def gerer_client(connexion, adresse):
             ehlo_recu = True
             connexion.send(b"502 commande not implemented\r\n")
 
+        # si une commande RSET est recue #
+        elif ligne.upper().startswith("RSET"):
+            print("Commande RSET recue.")
+
+            emetteur = None
+            destinataire = None
+            dossier_emetteur = None
+            ehlo_recu = False
+            connexion.send(b"250 OK\r\n")
+
+        # si une commande NOOP est recue #
+        elif ligne.upper().startswith("NOOP"):
+            print("Commande NOOP recue.")
+            connexion.send(b"250 OK\r\n")
+
         # sinon commande inconnue #
         else:
             connexion.send(b"500 Commande inconnue\r\n")
@@ -130,3 +155,7 @@ if __name__ == "__main__":
             )
             thread_client.daemon = True
             thread_client.start()
+
+######### Ajout de sujets (Subject:) #########
+######### Ajout de date (Date:) #########
+######### Ajout de separateur dans l'affichage des emails #########

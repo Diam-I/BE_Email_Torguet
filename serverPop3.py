@@ -63,7 +63,7 @@ def gerer_client(connexion, adresse):
             for i, email in enumerate(emails, start=1):
                 taille = os.path.getsize(os.path.join(dossier_utilisateur, email))
                 reponse += f"{i} {taille}\r\n"
-            reponse += ".\r\n"
+            # reponse += ".\r\n"
             connexion.send(reponse.encode("utf-8"))
 
         elif ligne.upper().startswith("RETR"):
@@ -86,14 +86,80 @@ def gerer_client(connexion, adresse):
                         encoding="utf-8",
                     ) as f:
                         contenu = f.read()
-                    reponse = f"+OK {len(contenu)} octets\r\n{contenu}\r\n.\r\n"
+                    # reponse = f"+OK {len(contenu)} octets\r\n{contenu}\r\n.\r\n"
+                    reponse = f"+OK {len(contenu)} octets\r\n{contenu}\r\n"
                 else:
                     reponse = "-ERR Numero de message invalide\r\n"
             except (IndexError, ValueError):
                 reponse = "-ERR Commande RETR mal formée\r\n"
 
             connexion.send(reponse.encode("utf-8"))
+        # si commande TOP #
+        elif ligne.upper().startswith("TOP"):
+            print("Commande TOP recue")
 
+            if utilisateur is None:
+                connexion.send(b"-ERR USER requis\r\n")
+                continue
+
+            dossier_utilisateur = os.path.join(DOSSIER_RACINE, utilisateur)
+            os.makedirs(dossier_utilisateur, exist_ok=True)
+            try:
+                parts = ligne.split()
+                numero_email = int(parts[1]) - 1
+                nb_lignes = int(parts[2])
+                emails = os.listdir(dossier_utilisateur)
+                if 0 <= numero_email < len(emails):
+                    with open(
+                        os.path.join(dossier_utilisateur, emails[numero_email]),
+                        "r",
+                        encoding="utf-8",
+                    ) as f:
+                        contenu = f.readlines()
+                    en_tete = []
+                    corps = []
+                    separator_found = False
+                    for line in contenu:
+                        if line.strip() == "":
+                            separator_found = True
+                        if not separator_found:
+                            en_tete.append(line)
+                        else:
+                            corps.append(line)
+                    corps_lignes = corps[:nb_lignes]
+                    reponse_contenu = "".join(en_tete + corps_lignes)
+                    reponse = (
+                        f"+OK {len(reponse_contenu)} octets\r\n{reponse_contenu}\r\n"
+                    )
+                else:
+                    reponse = "-ERR Numero de message invalide\r\n"
+            except (IndexError, ValueError):
+                reponse = "-ERR Commande TOP mal formée\r\n"
+
+            connexion.send(reponse.encode("utf-8"))
+
+        # si la commande est DELE #
+        elif ligne.upper().startswith("DELE"):
+            print("Commande DELE recue")
+
+            if utilisateur is None:
+                connexion.send(b"-ERR USER requis\r\n")
+                continue
+
+            dossier_utilisateur = os.path.join(DOSSIER_RACINE, utilisateur)
+            os.makedirs(dossier_utilisateur, exist_ok=True)
+            try:
+                numero_email = int(ligne.split()[1]) - 1
+                emails = os.listdir(dossier_utilisateur)
+                if 0 <= numero_email < len(emails):
+                    os.remove(os.path.join(dossier_utilisateur, emails[numero_email]))
+                    reponse = "+OK Message supprime\r\n"
+                else:
+                    reponse = "-ERR Numero de message invalide\r\n"
+            except (IndexError, ValueError):
+                reponse = "-ERR Commande DELE mal formée\r\n"
+
+            connexion.send(reponse.encode("utf-8"))
         # sinon commande inconnue #
         else:
             connexion.send(b"-ERR Commande inconnue\r\n")
