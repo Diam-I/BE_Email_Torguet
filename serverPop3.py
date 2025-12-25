@@ -1,6 +1,5 @@
 import os
 import socket
-import datetime
 import threading
 
 HOST = "localhost"
@@ -12,6 +11,8 @@ DOSSIER_RACINE = "boite_mail"
 def gerer_client(connexion, adresse):
     print("Connecte par", adresse)
     connexion.send(b"+OK POP3 server ready\r\n")
+
+    utilisateur = None  # utilisateur POP3 (email)
 
     while True:
         donnees = connexion.recv(1024)
@@ -26,16 +27,23 @@ def gerer_client(connexion, adresse):
         if ligne.upper().startswith("QUIT"):
             # si une commande QUIT est recue #
             print("Commande QUIT recue")
-            connexion.send(b"221 Fermeture de la connexion\r\n")
+            connexion.send(b"+OK Fermeture de la connexion\r\n")
             break
+
+        elif ligne.upper().startswith("USER"):
+            # si une commande USER est recue #
+            utilisateur = ligne.split(" ", 1)[1]
+            connexion.send(b"+OK Utilisateur reconnu\r\n")
 
         elif ligne.upper().startswith("STAT"):
             # si une commande STAT est recue #
             print("Commande STAT recue")
-            utilisateur = adresse[0]
-            dossier_utilisateur = os.path.join(
-                DOSSIER_RACINE, utilisateur.replace("<", "").replace(">", "")
-            )
+
+            if utilisateur is None:
+                connexion.send(b"-ERR USER requis\r\n")
+                continue
+
+            dossier_utilisateur = os.path.join(DOSSIER_RACINE, utilisateur)
             os.makedirs(dossier_utilisateur, exist_ok=True)
             nb_emails = len(os.listdir(dossier_utilisateur))
             connexion.send(f"+OK {nb_emails} messages\r\n".encode("utf-8"))
@@ -43,10 +51,12 @@ def gerer_client(connexion, adresse):
         elif ligne.upper() == "LIST":
             # si une commande LIST est recue #
             print("Commande LIST recue")
-            utilisateur = adresse[0]
-            dossier_utilisateur = os.path.join(
-                DOSSIER_RACINE, utilisateur.replace("<", "").replace(">", "")
-            )
+
+            if utilisateur is None:
+                connexion.send(b"-ERR USER requis\r\n")
+                continue
+
+            dossier_utilisateur = os.path.join(DOSSIER_RACINE, utilisateur)
             os.makedirs(dossier_utilisateur, exist_ok=True)
             emails = os.listdir(dossier_utilisateur)
             reponse = f"+OK {len(emails)} messages\r\n"
@@ -55,20 +65,25 @@ def gerer_client(connexion, adresse):
                 reponse += f"{i} {taille}\r\n"
             reponse += ".\r\n"
             connexion.send(reponse.encode("utf-8"))
+
         elif ligne.upper().startswith("RETR"):
             # si une commande RETR est recue #
             print("Commande RETR recue")
-            utilisateur = adresse[0]  # utiliser l'adresse IP comme identifiant #
-            dossier_utilisateur = os.path.join(
-                DOSSIER_RACINE, utilisateur.replace("<", "").replace(">", "")
-            )
+
+            if utilisateur is None:
+                connexion.send(b"-ERR USER requis\r\n")
+                continue
+
+            dossier_utilisateur = os.path.join(DOSSIER_RACINE, utilisateur)
             os.makedirs(dossier_utilisateur, exist_ok=True)
             try:
                 numero_email = int(ligne.split()[1]) - 1
                 emails = os.listdir(dossier_utilisateur)
                 if 0 <= numero_email < len(emails):
                     with open(
-                        os.path.join(dossier_utilisateur, emails[numero_email]), "r"
+                        os.path.join(dossier_utilisateur, emails[numero_email]),
+                        "r",
+                        encoding="utf-8",
                     ) as f:
                         contenu = f.read()
                     reponse = f"+OK {len(contenu)} octets\r\n{contenu}\r\n.\r\n"
@@ -76,11 +91,12 @@ def gerer_client(connexion, adresse):
                     reponse = "-ERR Numero de message invalide\r\n"
             except (IndexError, ValueError):
                 reponse = "-ERR Commande RETR mal formée\r\n"
+
             connexion.send(reponse.encode("utf-8"))
 
         # sinon commande inconnue #
         else:
-            connexion.send(b"500 Commande inconnue\r\n")
+            connexion.send(b"-ERR Commande inconnue\r\n")
 
     connexion.close()
     print(f"Connexion fermée pour {adresse}")

@@ -132,7 +132,7 @@ def main():
                 return
             print(f"Connecté au serveur POP3 {HOST}:{PORT_POP3}")
             # envoyer STAT #
-            env_msg(pop3_socket, "STAT")
+            env_msg(pop3_socket, f"USER {mail_utilisateur}")
             resp = recv_rep(pop3_socket)
             print("Serveur:", resp.strip())
             # envoyer LIST #
