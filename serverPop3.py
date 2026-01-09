@@ -2,50 +2,65 @@ import os
 import socket
 import threading
 
+### Variables d'environnement ###
+
 HOST = "localhost"
 PORT_POP3 = 2000
 DOSSIER_RACINE = "boite_mail"
 
+
 def gerer_client(connexion, adresse):
+    """Fonction qui permet de gerer une session client POP3"""
     print("Connecte par", adresse)
     connexion.send(b"+OK POP3 server ready\r\n")
     utilisateur = None
 
     while True:
         donnees = connexion.recv(1024)
-        if not donnees: break
+        if not donnees:
+            break
         ligne = donnees.decode("utf-8").strip()
 
         if ligne.upper().startswith("QUIT"):
+            # fermeture de la connexion #
             connexion.send(b"+OK Fermeture de la connexion\r\n")
             break
 
         elif ligne.upper().startswith("USER"):
+            # reception de l'utilisateur #
             utilisateur = ligne.split(" ", 1)[1].strip()
             connexion.send(b"+OK Utilisateur reconnu\r\n")
 
         elif ligne.upper().startswith("STAT"):
+            # affichage du statut de la boite mail #
             if utilisateur is None:
                 connexion.send(b"-ERR USER requis\r\n")
                 continue
 
             dossier_utilisateur = os.path.join(DOSSIER_RACINE, "reception", utilisateur)
+            # calcul du nombre de messages et de la taille totale #
             if os.path.exists(dossier_utilisateur):
                 emails = os.listdir(dossier_utilisateur)
                 nb_emails = len(emails)
-                taille_totale = sum(os.path.getsize(os.path.join(dossier_utilisateur, f)) for f in emails)
+                taille_totale = sum(
+                    os.path.getsize(os.path.join(dossier_utilisateur, f))
+                    for f in emails
+                )
                 connexion.send(f"+OK {nb_emails} {taille_totale}\r\n".encode("utf-8"))
             else:
                 connexion.send(b"+OK 0 0\r\n")
 
         elif ligne.upper() == "LIST":
+            # liste des emails dans la boite mail #
             if utilisateur is None:
                 connexion.send(b"-ERR USER requis\r\n")
                 continue
             dossier_utilisateur = os.path.join(DOSSIER_RACINE, "reception", utilisateur)
             if not os.path.exists(dossier_utilisateur):
+                # si il n'y a pas de messages #
                 connexion.send(b"+OK 0 messages\r\n")
             else:
+                # liste des messages #
                 emails = os.listdir(dossier_utilisateur)
                 reponse = f"+OK {len(emails)} messages\r\n"
                 for i, email in enumerate(emails, start=1):
@@ -54,25 +69,33 @@ def gerer_client(connexion, adresse):
                 connexion.send(reponse.encode("utf-8"))
 
         elif ligne.upper().startswith("RETR"):
+            # recuperation d'un email specifique #
             dossier_utilisateur = os.path.join(DOSSIER_RACINE, "reception", utilisateur)
             try:
                 numero_email = int(ligne.split()[1]) - 1
                 emails = os.listdir(dossier_utilisateur)
                 if 0 <= numero_email < len(emails):
-                    with open(os.path.join(dossier_utilisateur, emails[numero_email]), "r", encoding="utf-8") as f:
+                    with open(
+                        os.path.join(dossier_utilisateur, emails[numero_email]),
+                        "r",
+                        encoding="utf-8",
+                    ) as f:
                         contenu = f.read()
-                    connexion.send(f"+OK {len(contenu)} octets\r\n{contenu}\r\n".encode("utf-8"))
+                    connexion.send(
+                        f"+OK {len(contenu)} octets\r\n{contenu}\r\n".encode("utf-8")
+                    )
                 else:
                     connexion.send(b"-ERR Numero invalide\r\n")
             except:
                 connexion.send(b"-ERR Erreur RETR\r\n")
         elif ligne.upper().startswith("DELE"):
+            # suppression d'un email specifique #
             print("Commande DELE recue")
             if utilisateur is None:
                 connexion.send(b"-ERR USER requis\r\n")
                 continue
 
-            dossier_utilisateur = os.path.join(DOSSIER_RACINE,"reception", utilisateur)
+            dossier_utilisateur = os.path.join(DOSSIER_RACINE, "reception", utilisateur)
             os.makedirs(dossier_utilisateur, exist_ok=True)
             try:
                 numero_email = int(ligne.split()[1]) - 1
@@ -89,7 +112,9 @@ def gerer_client(connexion, adresse):
 
     connexion.close()
 
+
 if __name__ == "__main__":
+    """Fonction principale qui demarre le serveur POP3"""
     os.makedirs(os.path.join(DOSSIER_RACINE, "reception"), exist_ok=True)
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -100,7 +125,9 @@ if __name__ == "__main__":
             print("\n=> Utilisez CTRL+C pour arrêter proprement.")
             while True:
                 conn, addr = s.accept()
-                threading.Thread(target=gerer_client, args=(conn, addr), daemon=True).start()
+                threading.Thread(
+                    target=gerer_client, args=(conn, addr), daemon=True
+                ).start()
         except KeyboardInterrupt:
             print("\n==> Arrêt du serveur POP3 demandé.")
         finally:
