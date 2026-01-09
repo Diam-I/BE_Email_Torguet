@@ -15,12 +15,15 @@ QUIT pour fermer la connexion
 Sauvegarde des emails dans des fichiers texte organisés par expéditeur.
 Client interactif permettant de se connecter au serveur et d’envoyer des emails ligne par ligne.
 
-Le serveur écoute par défaut sur localhost:8025. Les emails reçus sont stockés dans boite_mail/<emetteur>.
+Le serveur écoute par défaut sur localhost:Num_port. Les emails reçus sont stockés dans boite_mail/reception/<@User> et les emails envoyés dans  boite_mail/envoi/<@User>.
 
 Architecture
-server.py : serveur SMTP multiclient basé sur socket et threading.
-client.py : client interactif pour envoyer des emails.
-boite_mail/ : répertoire contenant les messages stockés.
+serverSMTP.py : serveur multiclient basé sur socket et threading responsable de l'envoi des email.
+serverPop3.py : serveur  multiclient basé sur socket et threading responsable de la consultation et la manipulation(suppression) des mail après envoi.
+client.py : client interactif pour envoyer des emails et gerer la communication avec les 2 serveurs.
+boite_mail/ : répertoire contenant les messages envoyer et reçu.
+ui.py: responsable de l'authentification et de l'inscription des user aupres du serveur smtp/POP
+user.py: permet grâce a ces deux fontionnalite d'interagir avec la speudo base de donnée
 
 
 Version 1 : SMTP simple
@@ -56,10 +59,16 @@ Fonctionnalités demandées :
     Les emails envoyés par SMTP sont accessibles depuis le dossier reception/ du destinataire.
 
 Version 4 : Options avancées
-Objectif : Ajouter des fonctionnalités supplémentaires pour améliorer le serveur SMTP/POP3/IMAP.
-    Possibilités :
-        Authentification des utilisateurs.
-        Support de commandes avancées SMTP ou POP3.
-        Implémentation partielle d’IMAP.
-        Journalisation et suivi des emails lus/non lus.
-        Sécurisation TLS/SSL.
+Nous avons rajouter et pour ameliorer des fonctionnalités deja existante afin d'améliorer l'experience utilisateur et la qualite de code.
+    Authentification des utilisateurs.
+    Support de commandes avancées SMTP ou POP3.
+    Hachage MD5 : Les mots de passe ne sont jamais stockés en clair.
+    Limitation des tentatives : ui.py bloque l'accès après 3 échecs consécutifs
+    Processus d'inscription: gestion des doublons
+    SMTP - RSET : Capacité de réinitialiser une transaction sans fermer la connexion TCP.
+    Pop3 - DEL : Suppression d'un message 
+
+Ce projet a ete realiser dans le cadre du Bureau d'etude du module interoperabilite par : 
+- Traore Fatoumata Salia 
+- Didane Amina.
+Periode: Octobre 2025 - janvier 2026

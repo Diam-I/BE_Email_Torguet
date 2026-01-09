@@ -3,150 +3,76 @@ import socket
 import threading
 
 HOST = "localhost"
-PORT_POP3 = 110  # Port POP3 #
+PORT_POP3 = 2000
 DOSSIER_RACINE = "boite_mail"
 
-
-### fonction permettant de gerer un client  ###
 def gerer_client(connexion, adresse):
     print("Connecte par", adresse)
     connexion.send(b"+OK POP3 server ready\r\n")
-
-    utilisateur = None  # utilisateur POP3 (email)
+    utilisateur = None
 
     while True:
         donnees = connexion.recv(1024)
-        ## si le client deconnecte ##
-        if not donnees:
-            print("Client deconnecte...")
-            break
-
+        if not donnees: break
         ligne = donnees.decode("utf-8").strip()
 
-        ## traitement des commandes ##
         if ligne.upper().startswith("QUIT"):
-            # si une commande QUIT est recue #
-            print("Commande QUIT recue")
             connexion.send(b"+OK Fermeture de la connexion\r\n")
             break
 
         elif ligne.upper().startswith("USER"):
-            # si une commande USER est recue #
-            utilisateur = ligne.split(" ", 1)[1]
+            utilisateur = ligne.split(" ", 1)[1].strip()
             connexion.send(b"+OK Utilisateur reconnu\r\n")
 
         elif ligne.upper().startswith("STAT"):
-            # si une commande STAT est recue #
-            print("Commande STAT recue")
-
             if utilisateur is None:
                 connexion.send(b"-ERR USER requis\r\n")
                 continue
 
-            dossier_utilisateur = os.path.join(DOSSIER_RACINE, utilisateur)
-            os.makedirs(dossier_utilisateur, exist_ok=True)
-            nb_emails = len(os.listdir(dossier_utilisateur))
-            connexion.send(f"+OK {nb_emails} messages\r\n".encode("utf-8"))
+            dossier_utilisateur = os.path.join(DOSSIER_RACINE, "reception", utilisateur)
+            if os.path.exists(dossier_utilisateur):
+                emails = os.listdir(dossier_utilisateur)
+                nb_emails = len(emails)
+                taille_totale = sum(os.path.getsize(os.path.join(dossier_utilisateur, f)) for f in emails)
+                connexion.send(f"+OK {nb_emails} {taille_totale}\r\n".encode("utf-8"))
+            else:
+                connexion.send(b"+OK 0 0\r\n")
 
         elif ligne.upper() == "LIST":
-            # si une commande LIST est recue #
-            print("Commande LIST recue")
-
             if utilisateur is None:
                 connexion.send(b"-ERR USER requis\r\n")
                 continue
-
-            dossier_utilisateur = os.path.join(DOSSIER_RACINE, utilisateur)
-            os.makedirs(dossier_utilisateur, exist_ok=True)
-            emails = os.listdir(dossier_utilisateur)
-            reponse = f"+OK {len(emails)} messages\r\n"
-            for i, email in enumerate(emails, start=1):
-                taille = os.path.getsize(os.path.join(dossier_utilisateur, email))
-                reponse += f"{i} {taille}\r\n"
-            # reponse += ".\r\n"
-            connexion.send(reponse.encode("utf-8"))
+            dossier_utilisateur = os.path.join(DOSSIER_RACINE, "reception", utilisateur)
+            if not os.path.exists(dossier_utilisateur):
+                connexion.send(b"+OK 0 messages\r\n")
+            else:
+                emails = os.listdir(dossier_utilisateur)
+                reponse = f"+OK {len(emails)} messages\r\n"
+                for i, email in enumerate(emails, start=1):
+                    taille = os.path.getsize(os.path.join(dossier_utilisateur, email))
+                    reponse += f"{i} {taille}\r\n"
+                connexion.send(reponse.encode("utf-8"))
 
         elif ligne.upper().startswith("RETR"):
-            # si une commande RETR est recue #
-            print("Commande RETR recue")
-
-            if utilisateur is None:
-                connexion.send(b"-ERR USER requis\r\n")
-                continue
-
-            dossier_utilisateur = os.path.join(DOSSIER_RACINE, utilisateur)
-            os.makedirs(dossier_utilisateur, exist_ok=True)
+            dossier_utilisateur = os.path.join(DOSSIER_RACINE, "reception", utilisateur)
             try:
                 numero_email = int(ligne.split()[1]) - 1
                 emails = os.listdir(dossier_utilisateur)
                 if 0 <= numero_email < len(emails):
-                    with open(
-                        os.path.join(dossier_utilisateur, emails[numero_email]),
-                        "r",
-                        encoding="utf-8",
-                    ) as f:
+                    with open(os.path.join(dossier_utilisateur, emails[numero_email]), "r", encoding="utf-8") as f:
                         contenu = f.read()
-                    # reponse = f"+OK {len(contenu)} octets\r\n{contenu}\r\n.\r\n"
-                    reponse = f"+OK {len(contenu)} octets\r\n{contenu}\r\n"
+                    connexion.send(f"+OK {len(contenu)} octets\r\n{contenu}\r\n".encode("utf-8"))
                 else:
-                    reponse = "-ERR Numero de message invalide\r\n"
-            except (IndexError, ValueError):
-                reponse = "-ERR Commande RETR mal formée\r\n"
-
-            connexion.send(reponse.encode("utf-8"))
-        # si commande TOP #
-        elif ligne.upper().startswith("TOP"):
-            print("Commande TOP recue")
-
-            if utilisateur is None:
-                connexion.send(b"-ERR USER requis\r\n")
-                continue
-
-            dossier_utilisateur = os.path.join(DOSSIER_RACINE, utilisateur)
-            os.makedirs(dossier_utilisateur, exist_ok=True)
-            try:
-                parts = ligne.split()
-                numero_email = int(parts[1]) - 1
-                nb_lignes = int(parts[2])
-                emails = os.listdir(dossier_utilisateur)
-                if 0 <= numero_email < len(emails):
-                    with open(
-                        os.path.join(dossier_utilisateur, emails[numero_email]),
-                        "r",
-                        encoding="utf-8",
-                    ) as f:
-                        contenu = f.readlines()
-                    en_tete = []
-                    corps = []
-                    separator_found = False
-                    for line in contenu:
-                        if line.strip() == "":
-                            separator_found = True
-                        if not separator_found:
-                            en_tete.append(line)
-                        else:
-                            corps.append(line)
-                    corps_lignes = corps[:nb_lignes]
-                    reponse_contenu = "".join(en_tete + corps_lignes)
-                    reponse = (
-                        f"+OK {len(reponse_contenu)} octets\r\n{reponse_contenu}\r\n"
-                    )
-                else:
-                    reponse = "-ERR Numero de message invalide\r\n"
-            except (IndexError, ValueError):
-                reponse = "-ERR Commande TOP mal formée\r\n"
-
-            connexion.send(reponse.encode("utf-8"))
-
-        # si la commande est DELE #
+                    connexion.send(b"-ERR Numero invalide\r\n")
+            except:
+                connexion.send(b"-ERR Erreur RETR\r\n")
         elif ligne.upper().startswith("DELE"):
             print("Commande DELE recue")
-
             if utilisateur is None:
                 connexion.send(b"-ERR USER requis\r\n")
                 continue
 
-            dossier_utilisateur = os.path.join(DOSSIER_RACINE, utilisateur)
+            dossier_utilisateur = os.path.join(DOSSIER_RACINE,"reception", utilisateur)
             os.makedirs(dossier_utilisateur, exist_ok=True)
             try:
                 numero_email = int(ligne.split()[1]) - 1
@@ -160,27 +86,22 @@ def gerer_client(connexion, adresse):
                 reponse = "-ERR Commande DELE mal formée\r\n"
 
             connexion.send(reponse.encode("utf-8"))
-        # sinon commande inconnue #
-        else:
-            connexion.send(b"-ERR Commande inconnue\r\n")
 
     connexion.close()
-    print(f"Connexion fermée pour {adresse}")
 
-
-### fonction principale du serveur ###
 if __name__ == "__main__":
-    ## creation du dossier racine des boites mail s'il n'existe pas ##
-    os.makedirs(DOSSIER_RACINE, exist_ok=True)
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ecoute:
-        ecoute.bind((HOST, PORT_POP3))
-        ecoute.listen()
-        print(f"Serveur ecoute sur {HOST}:{PORT_POP3}")
-        # permet de cree un thread par client #
-        while True:
-            connexion, adresse = ecoute.accept()
-            thread_client = threading.Thread(
-                target=gerer_client, args=(connexion, adresse)
-            )
-            thread_client.daemon = True
-            thread_client.start()
+    os.makedirs(os.path.join(DOSSIER_RACINE, "reception"), exist_ok=True)
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            s.bind((HOST, PORT_POP3))
+            s.listen()
+            print(f"\n=== SERVEUR POP3 Lancer - Ecoute sur {HOST}:{PORT_POP3} ===")
+            print("\n=> Utilisez CTRL+C pour arrêter proprement.")
+            while True:
+                conn, addr = s.accept()
+                threading.Thread(target=gerer_client, args=(conn, addr), daemon=True).start()
+        except KeyboardInterrupt:
+            print("\n==> Arrêt du serveur POP3 demandé.")
+        finally:
+            print("Serveur éteint, port libéré")
