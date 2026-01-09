@@ -63,16 +63,45 @@ def afficher_tableau(titre, dossiers, type_mail, mail_utilisateur):
 
 
 def consulter_envoi(dossier, mail):
-
     if afficher_tableau("MESSAGES ENVOYÉS", dossier, "envoi", mail):
         print("\n" + "Voulez-vous :")
         print("1- Consulter un message ")
         print("2- Supprimer un message ")
         print("=> Appuyez sur n'importe quelle autre touche pour revenir à l'accueil ")
-
         choix_env = input("\nVeuillez renseigner une option : ").strip()
         return choix_env
     return 0
+
+
+### Fonctions utilitaires pour factorisation ###
+def saisie_numero_message(max_num):
+    """Demande à l'utilisateur de saisir un numéro valide"""
+    num = input("\nNuméro du message : ").strip()
+    if num.isdigit() and 0 < int(num) <= max_num:
+        return int(num)
+    print("=> Numéro invalide !!")
+    return None
+
+
+def afficher_message(path_fichier, num):
+    """Affiche le contenu d'un message depuis le fichier"""
+    with open(path_fichier, "r", encoding="utf-8") as f:
+        print("\n" + "📂 " + f" MESSAGE {num} ".center(56, "-"))
+        print(f.read())
+        print("-" * 60)
+
+
+def supprimer_message(path_fichier, num):
+    """Supprime un fichier de message après confirmation"""
+    confirm = input(f"Confirmer la suppression du message {num} ? (y/n) : ").lower()
+    if confirm == "y":
+        try:
+            os.remove(path_fichier)
+            print(f"=> Message {num} supprimé avec succès.")
+        except Exception as e:
+            print(f"=> Erreur lors de la suppression : {e}")
+    else:
+        print("Suppression annulée.")
 
 
 def main():
@@ -158,33 +187,35 @@ def main():
                     print(
                         "=> Appuyer sur m'importe quel autre touche pour revenir a la page d'acceuil "
                     )
-                    choix = input("\nVeuillez renseigner une option : ").strip()
-                    if choix == "1":
-                        num = input(
-                            "\nQuel email lire (numéro) ou Entrée pour retour : "
-                        ).strip()
-                        if num.isdigit():
+                    choix_pop = input("\nVeuillez renseigner une option : ").strip()
+
+                    path_reception = os.path.join(
+                        DOSSIER_RACINE, "reception", mail_utilisateur
+                    )
+                    files = (
+                        sorted(os.listdir(path_reception), reverse=True)
+                        if os.path.exists(path_reception)
+                        else []
+                    )
+
+                    if choix_pop == "1":
+                        num = saisie_numero_message(len(files))
+                        if num:
                             env_msg(pop3_socket, f"RETR {num}")
                             contenu = recv_rep(pop3_socket)
                             print("\n" + "╔" + "═" * 60 + "╗")
                             print("║" + " CONTENU DU MESSAGE ".center(60) + "║")
                             print("╚" + "═" * 60 + "╝")
                             print(contenu)
-                    elif choix == "2":
-                        num = input("\nNuméro du mail à supprimer : ").strip()
-                        if num.isdigit():
-                            confirm = input(
-                                f"Confirmer la suppression du message {num} ? (y/n) : "
-                            ).lower()
-                            if confirm == "y":
-                                env_msg(pop3_socket, f"DELE {num}")
-                                reponse = recv_rep(pop3_socket)
-                                if "+OK" in reponse:
-                                    print(f" Succès : {reponse.strip()}")
-                                else:
-                                    print(f" Erreur serveur : {reponse.strip()}")
+                    elif choix_pop == "2":
+                        num = saisie_numero_message(len(files))
+                        if num:
+                            env_msg(pop3_socket, f"DELE {num}")
+                            reponse = recv_rep(pop3_socket)
+                            if "+OK" in reponse:
+                                print(f" Succès : {reponse.strip()}")
                             else:
-                                print("Suppression annulée.")
+                                print(f" Erreur serveur : {reponse.strip()}")
 
                 env_msg(pop3_socket, "QUIT")
                 pop3_socket.close()
@@ -195,47 +226,21 @@ def main():
             path_envoi = os.path.join(DOSSIER_RACINE, "envoi", mail_utilisateur)
             option = consulter_envoi(DOSSIER_RACINE, mail_utilisateur)
             if option != 0:
-                if os.path.exists(path_envoi):
-                    files = sorted(os.listdir(path_envoi), reverse=True)
-                else:
-                    files = []
+                files = (
+                    sorted(os.listdir(path_envoi), reverse=True)
+                    if os.path.exists(path_envoi)
+                    else []
+                )
 
                 if option == "1":
-                    num = input("\nQuel message consulter (numéro) : ").strip()
-                    if num.isdigit() and 0 < int(num) <= len(files):
-                        with open(
-                            os.path.join(path_envoi, files[int(num) - 1]),
-                            "r",
-                            encoding="utf-8",
-                        ) as f:
-                            print("\n" + "📂 " + f" MESSAGE {num} ".center(56, "-"))
-                            print(f.read())
-                            print("-" * 60)
-                    else:
-                        print("=>  Numéro invalide !! ")
-
+                    num = saisie_numero_message(len(files))
+                    if num:
+                        afficher_message(os.path.join(path_envoi, files[num - 1]), num)
                 elif option == "2":
-                    num = input(
-                        "\nNuméro du message à supprimer de l'historique : "
-                    ).strip()
-                    if num.isdigit() and 0 < int(num) <= len(files):
-                        nom_fichier = files[int(num) - 1]
-                        confirm = input(
-                            f"Confirmer la suppression définitive du message {num} ? (y/n) : "
-                        ).lower()
+                    num = saisie_numero_message(len(files))
+                    if num:
+                        supprimer_message(os.path.join(path_envoi, files[num - 1]), num)
 
-                        if confirm == "y":
-                            try:
-                                os.remove(os.path.join(path_envoi, nom_fichier))
-                                print(
-                                    f"=> Message {num} supprimé avec succès de l'historique."
-                                )
-                            except Exception as e:
-                                print(f"=> Erreur lors de la suppression : {e}")
-                        else:
-                            print("Suppression annulée.")
-                    else:
-                        print("=> Numéro invalide !!")
         elif choix == "4":
             print("Deconnection....")
             break

@@ -3,10 +3,22 @@ import socket
 import threading
 
 ### Variables d'environnement ###
-
 HOST = "localhost"
 PORT_POP3 = 2000
 DOSSIER_RACINE = "boite_mail"
+
+
+def chemin_utilisateur(utilisateur):
+    """Retourne le chemin vers le dossier réception d'un utilisateur"""
+    return os.path.join(DOSSIER_RACINE, "reception", utilisateur)
+
+
+def liste_emails(utilisateur):
+    """Retourne la liste des emails de l'utilisateur"""
+    path = chemin_utilisateur(utilisateur)
+    if not os.path.exists(path):
+        return []
+    return os.listdir(path)
 
 
 def gerer_client(connexion, adresse):
@@ -37,46 +49,39 @@ def gerer_client(connexion, adresse):
                 connexion.send(b"-ERR USER requis\r\n")
                 continue
 
-            dossier_utilisateur = os.path.join(DOSSIER_RACINE, "reception", utilisateur)
-            # calcul du nombre de messages et de la taille totale #
-            if os.path.exists(dossier_utilisateur):
-                emails = os.listdir(dossier_utilisateur)
-                nb_emails = len(emails)
-                taille_totale = sum(
-                    os.path.getsize(os.path.join(dossier_utilisateur, f))
-                    for f in emails
-                )
-                connexion.send(f"+OK {nb_emails} {taille_totale}\r\n".encode("utf-8"))
-            else:
-                connexion.send(b"+OK 0 0\r\n")
+            emails = liste_emails(utilisateur)
+            nb_emails = len(emails)
+            taille_totale = sum(
+                os.path.getsize(os.path.join(chemin_utilisateur(utilisateur), f))
+                for f in emails
+            )
+            connexion.send(f"+OK {nb_emails} {taille_totale}\r\n".encode("utf-8"))
 
         elif ligne.upper() == "LIST":
             # liste des emails dans la boite mail #
             if utilisateur is None:
                 connexion.send(b"-ERR USER requis\r\n")
                 continue
-            dossier_utilisateur = os.path.join(DOSSIER_RACINE, "reception", utilisateur)
-            if not os.path.exists(dossier_utilisateur):
-                # si il n'y a pas de messages #
-                connexion.send(b"+OK 0 messages\r\n")
-            else:
-                # liste des messages #
-                emails = os.listdir(dossier_utilisateur)
-                reponse = f"+OK {len(emails)} messages\r\n"
-                for i, email in enumerate(emails, start=1):
-                    taille = os.path.getsize(os.path.join(dossier_utilisateur, email))
-                    reponse += f"{i} {taille}\r\n"
-                connexion.send(reponse.encode("utf-8"))
+
+            emails = liste_emails(utilisateur)
+            reponse = f"+OK {len(emails)} messages\r\n"
+            for i, email in enumerate(emails, start=1):
+                taille = os.path.getsize(
+                    os.path.join(chemin_utilisateur(utilisateur), email)
+                )
+                reponse += f"{i} {taille}\r\n"
+            connexion.send(reponse.encode("utf-8"))
 
         elif ligne.upper().startswith("RETR"):
             # recuperation d'un email specifique #
-            dossier_utilisateur = os.path.join(DOSSIER_RACINE, "reception", utilisateur)
             try:
                 numero_email = int(ligne.split()[1]) - 1
-                emails = os.listdir(dossier_utilisateur)
+                emails = liste_emails(utilisateur)
                 if 0 <= numero_email < len(emails):
                     with open(
-                        os.path.join(dossier_utilisateur, emails[numero_email]),
+                        os.path.join(
+                            chemin_utilisateur(utilisateur), emails[numero_email]
+                        ),
                         "r",
                         encoding="utf-8",
                     ) as f:
@@ -88,6 +93,7 @@ def gerer_client(connexion, adresse):
                     connexion.send(b"-ERR Numero invalide\r\n")
             except:
                 connexion.send(b"-ERR Erreur RETR\r\n")
+
         elif ligne.upper().startswith("DELE"):
             # suppression d'un email specifique #
             print("Commande DELE recue")
@@ -95,13 +101,13 @@ def gerer_client(connexion, adresse):
                 connexion.send(b"-ERR USER requis\r\n")
                 continue
 
-            dossier_utilisateur = os.path.join(DOSSIER_RACINE, "reception", utilisateur)
-            os.makedirs(dossier_utilisateur, exist_ok=True)
+            path_user = chemin_utilisateur(utilisateur)
+            os.makedirs(path_user, exist_ok=True)
             try:
                 numero_email = int(ligne.split()[1]) - 1
-                emails = os.listdir(dossier_utilisateur)
+                emails = liste_emails(utilisateur)
                 if 0 <= numero_email < len(emails):
-                    os.remove(os.path.join(dossier_utilisateur, emails[numero_email]))
+                    os.remove(os.path.join(path_user, emails[numero_email]))
                     reponse = "+OK Message supprime\r\n"
                 else:
                     reponse = "-ERR Numero de message invalide\r\n"

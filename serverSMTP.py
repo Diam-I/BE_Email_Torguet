@@ -11,6 +11,19 @@ PORT_SMTP = 3000
 DOSSIER_RACINE = "boite_mail"
 
 
+def chemin_utilisateur(type_mail, utilisateur):
+    """Retourne le chemin vers le dossier 'reception' ou 'envoi' d'un utilisateur"""
+    return os.path.join(DOSSIER_RACINE, type_mail, utilisateur)
+
+
+def sauvegarder_message(utilisateur, type_mail, nom_fichier, contenu):
+    """Enregistre un message dans le dossier correspondant (reception/envoi)"""
+    path = chemin_utilisateur(type_mail, utilisateur)
+    os.makedirs(path, exist_ok=True)
+    with open(os.path.join(path, nom_fichier), "w", encoding="utf-8") as f:
+        f.write(contenu)
+
+
 def gerer_client(connexion, adresse):
     """Fonction permettant de gerer une session client"""
     print("Connecte par", adresse)
@@ -55,12 +68,10 @@ def gerer_client(connexion, adresse):
                 ligne_msg = client_fichier.readline()
                 if not ligne_msg:
                     break
-
                 ligne_clean = ligne_msg.strip()
                 # arrêter la saisie #
                 if ligne_clean == ".":
                     break
-
                 if ligne_clean.startswith("Subject:"):
                     sujet = ligne_clean.replace("Subject:", "").strip()
                 else:
@@ -68,37 +79,30 @@ def gerer_client(connexion, adresse):
 
             # Reconstruction du corps du message #
             contenu_message = "\n".join(messages)
-
-            # sauvegarde du message dans les dossiers de l'emetteur et du destinataire #
             date_formatee = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 
-            # Verification des destinataires locaux #
-            if len(destinataires_valides) > 0:
+            # Fonction utilitaire pour générer le contenu complet du message #
+            def construire_message(emetteur, destinataire, sujet, contenu):
+                return f"From: {emetteur}\nTo: {destinataire}\nSubject: {sujet}\nDate: {date_formatee}\n\n{contenu}"
+
+            # Vérification et sauvegarde pour tous les destinataires valides #
+            if destinataires_valides:
                 for d in destinataires_valides:
-                    contenu_final = f"From: {emetteur}\nTo: {d}\nSubject: {sujet}\nDate: {date_formatee}\n\n{contenu_message}"
                     nom_fichier = f"mail_From_{emetteur}_{timestamp}.txt"
-                    chemin_recp = os.path.join(DOSSIER_RACINE, "reception", d)
-                    os.makedirs(chemin_recp, exist_ok=True)
-                    with open(
-                        os.path.join(chemin_recp, nom_fichier), "w", encoding="utf-8"
-                    ) as f:
-                        f.write(contenu_final)
-                # On vide la liste après distribution #
+                    contenu_final = construire_message(
+                        emetteur, d, sujet, contenu_message
+                    )
+                    sauvegarder_message(d, "reception", nom_fichier, contenu_final)
                 destinataires_valides = []
 
-            # ENVOI : Toujours une trace pour l'expéditeur s'il existe #
+            # Sauvegarde dans l'historique de l'expéditeur #
             if emetteur:
-                # Contenu pour l'historique de l'expéditeur #
-                contenu_historique = f"From: {emetteur}\nTo: {destinataire}\nSubject: {sujet}\nDate: {date_formatee}\n\n{contenu_message}"
-
                 nom_fichier = f"mail_To_{destinataire}_{timestamp}.txt"
-                chemin_envoi = os.path.join(DOSSIER_RACINE, "envoi", emetteur)
-                os.makedirs(chemin_envoi, exist_ok=True)
-                with open(
-                    os.path.join(chemin_envoi, nom_fichier), "w", encoding="utf-8"
-                ) as f:
-                    f.write(contenu_historique)
+                contenu_historique = construire_message(
+                    emetteur, destinataire, sujet, contenu_message
+                )
+                sauvegarder_message(emetteur, "envoi", nom_fichier, contenu_historique)
 
             connexion.send(
                 b"250 OK Message bien recu, et transmis au destinataire \r\n"
@@ -117,7 +121,6 @@ def gerer_client(connexion, adresse):
         elif ligne.upper().startswith("EHLO"):
             # reception de la commande EHLO #
             print("\n=> Commande EHLO recue.")
-            ehlo_recu = True
             connexion.send(b"502 commande not implemented\r\n")
 
         elif ligne.upper().startswith("RSET"):
@@ -155,7 +158,6 @@ if __name__ == "__main__":
     """Fonction principale démarrant le serveur SMTP"""
     os.makedirs(DOSSIER_RACINE, exist_ok=True)
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # L'option SO_REUSEADDR permet de relancer le serveur immediatement sans attendre pour plus de facilite au viveau des test #
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
         server_socket.bind((HOST, PORT_SMTP))
