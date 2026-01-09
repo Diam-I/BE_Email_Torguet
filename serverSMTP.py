@@ -84,7 +84,8 @@ def gerer_client(connexion, adresse):
 
             # Fonction utilitaire pour générer le contenu complet du message #
             def construire_message(emetteur, destinataire, sujet, contenu):
-                return f"From: {emetteur}\nTo: {destinataire}\nSubject: {sujet}\nDate: {date_formatee}\n\n{contenu}"
+                # On utilise \r\n pour garantir la compatibilité universelle des sauts de ligne
+                return f"From: {emetteur}\r\nTo: {destinataire}\r\nSubject: {sujet}\r\nDate: {date_formatee}\n\n{contenu}"
 
             # Vérification et sauvegarde pour tous les destinataires valides #
             if destinataires_valides:

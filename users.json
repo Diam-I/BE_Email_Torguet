@@ -31,5 +31,11 @@
     },
     "zou@gmail.com": {
         "password_hash": "50ce1b7b75dbeda1c6c6c07b5c9dfa4e"
+    },
+    "testThunderbird@gmail.com": {
+        "password_hash": "16d7a4fca7442dda3ad93c9a726597e4"
+    },
+    "thunderbird@test.com": {
+        "password_hash": "16d7a4fca7442dda3ad93c9a726597e4"
     }
 }
